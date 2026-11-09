@@ -15,7 +15,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Test
-        run: dotnet test -c Release
+        run: dotnet test -c Release --logger GitHubActions
       - name: Publish
         run: dotnet publish src/DiskCleaner.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o publish
       - uses: actions/upload-artifact@v4

@@ -32,7 +32,8 @@ public class ScannerTests
     {
         using var d = new TempDir();
         d.File("real/big.bin", 5000);
-        Directory.CreateSymbolicLink(Path.Combine(d.Path, "link"), Path.Combine(d.Path, "real"));
+        try { Directory.CreateSymbolicLink(Path.Combine(d.Path, "link"), Path.Combine(d.Path, "real")); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return; } // Windows without symlink privilege
         var tree = await Scan(new PhysicalFileSystem(), d.Path);
         Assert.Equal(5000, tree.Root.AllocatedSize);
         var link = tree.Find(Path.Combine(d.Path, "link"))!;
