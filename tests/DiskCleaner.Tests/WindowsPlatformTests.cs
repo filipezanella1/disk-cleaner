@@ -64,3 +64,37 @@ public class WindowsPlatformTests
         Assert.False(new ShellRecycleBin().CanRecycle(@"C:\" + new string('a', 300)));
     }
 }
+
+public class WindowsProcessTests
+{
+    [Fact]
+    public void RestartManager_FindsThisProcess_HoldingAFile()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var d = new TempDir();
+        var path = d.File("held.txt", 10);
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var lockers = new RestartManagerFinder().FindLockers(new[] { path });
+        Assert.Contains(lockers, l => l.Id == Environment.ProcessId);
+    }
+
+    [Fact]
+    public void RestartManager_UnlockedFile_NoLockers()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var d = new TempDir();
+        Assert.Empty(new RestartManagerFinder().FindLockers(new[] { d.File("free.txt", 10) }));
+    }
+
+    [Fact]
+    public void Closer_ForceClosesProcessWithoutWindow()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ping", "-n 120 127.0.0.1")
+            { CreateNoWindow = true, UseShellExecute = false })!;
+        var info = new DiskCleaner.Core.Cleaning.LockingProcess(p.Id, "PING", "ping", p.StartTime.ToUniversalTime(), false, Array.Empty<string>());
+        var failed = new WindowsProcessCloser().CloseAll(new[] { info }, TimeSpan.FromSeconds(1));
+        Assert.Empty(failed);
+        Assert.True(p.WaitForExit(5000));
+    }
+}

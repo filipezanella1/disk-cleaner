@@ -145,8 +145,7 @@ public sealed class MapViewModel : ObservableObject
             return;
 
         var item = CleanupItem.FromNode(vm.Node, CleanupCategory.LargeFiles, Risk.Review, "Removido manualmente");
-        var cleaner = _services.CreateCleaner();
-        var result = await Task.Run(() => cleaner.Clean(new[] { item }, items => ConfirmPermanent(_services.Dialogs, items), CancellationToken.None));
+        var result = await Task.Run(() => _services.CleanWithLockHandling(new[] { item }, items => ConfirmPermanent(_services.Dialogs, items)));
         if (result.Skipped.Count > 0)
             _services.Dialogs.Info("Não removido", $"{vm.Node.Name}: {result.Skipped[0].Reason}");
         Cleaned?.Invoke(result);

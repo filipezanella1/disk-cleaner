@@ -104,8 +104,7 @@ public sealed class SuggestionsViewModel : ObservableObject
         IsCleaning = true;
         try
         {
-            var cleaner = _services.CreateCleaner();
-            var result = await Task.Run(() => cleaner.Clean(items, list => MapViewModel.ConfirmPermanent(dialogs, list), CancellationToken.None));
+            var result = await Task.Run(() => _services.CleanWithLockHandling(items, list => MapViewModel.ConfirmPermanent(dialogs, list)));
             var summary = $"Liberado: {SizeFormatter.Format(result.BytesFreed)}.\nRemovidos: {Text.Number(result.Removed.Count)}. Pulados: {Text.Number(result.Skipped.Count)}.";
             if (result.Skipped.Count > 0)
                 summary += "\n\n" + string.Join("\n", result.Skipped.Take(15).Select(s => $"• {s.Reason} — {s.Item.Path}"))

@@ -33,6 +33,8 @@ Essa lista é checada duas vezes: quando as sugestões são geradas e de novo na
 
 Se algum item não puder ir para a Lixeira (disco de rede ou caminho muito longo), o app avisa e pede uma confirmação extra antes de excluir de forma permanente.
 
+Se algum item estiver **em uso** por um programa aberto, o DiskCleaner mostra quais programas estão segurando os arquivos e **pergunta** se pode fechá-los. Se você confirmar, ele pede para cada programa fechar normalmente (como clicar no X) e, se o programa não fechar em 5 segundos, força o fechamento — o que não estiver salvo nesse programa é perdido. Depois tenta limpar de novo. Processos do Windows (Explorer, serviços etc.), programas de outro usuário ou rodando como administrador e o próprio DiskCleaner nunca são fechados.
+
 O app roda **sem administrador**. A limpeza do Windows Update, do WinSxS e do `hiberfil.sys` fica para uma versão futura.
 
 ## Baixar

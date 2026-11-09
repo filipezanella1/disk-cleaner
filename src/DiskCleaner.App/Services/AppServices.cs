@@ -55,6 +55,28 @@ public sealed class AppServices
 
     public Scanner CreateScanner() => new(FileSystem);
     public RuleEngine CreateEngine() => new(CreateRules(), Protected);
+    public LockedItemsHandler CreateLockHandler() =>
+        new(new RestartManagerFinder(), new WindowsProcessCloser(), FileSystem, Environment.ProcessId);
+
+    /// <summary>Cleans items, then offers to close the programs holding the ones that were in use and retries those.</summary>
+    public CleanupResult CleanWithLockHandling(IReadOnlyList<CleanupItem> items, Func<IReadOnlyList<CleanupItem>, bool> confirmPermanent)
+    {
+        var cleaner = CreateCleaner();
+        var result = cleaner.Clean(items, confirmPermanent, CancellationToken.None);
+        return CreateLockHandler().CloseAndRetry(result, cleaner, ConfirmCloseApps, confirmPermanent, CancellationToken.None);
+    }
+
+    private bool ConfirmCloseApps(IReadOnlyList<LockingProcess> processes)
+    {
+        var names = processes.Select(p => p.DisplayName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
+        return Dialogs.Confirm("Programas usando os arquivos",
+            "Estes programas estão usando arquivos que você quer limpar:\n\n" +
+            string.Join("\n", names.Select(n => "• " + n)) +
+            "\n\nFechar esses programas e tentar de novo?\n\n" +
+            "Salve seu trabalho antes. O DiskCleaner pede para cada programa fechar normalmente e, " +
+            "se ele não fechar em 5 segundos, força o fechamento — o que não estiver salvo será perdido.");
+    }
+
     public Cleaner CreateCleaner() => new(FileSystem, RecycleBin, Protected, new FileCleanupLog(LogDirectory, () => DateTime.Now));
     public RuleContext CreateContext(CancellationToken ct) => new(Folders, Settings, FileSystem, RecycleBin, DateTime.UtcNow, ct);
 }
