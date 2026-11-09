@@ -1,0 +1,65 @@
+<UserControl x:Class="DiskCleaner.App.Views.SuggestionsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <DockPanel Margin="0,8,0,0">
+    <Border DockPanel.Dock="Bottom" BorderBrush="#D1D5DB" BorderThickness="0,1,0,0" Padding="0,10,0,0">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Content="Limpar selecionados" Command="{Binding CleanCommand}" Margin="0" />
+        <TextBlock Text="{Binding SelectedTotalText}" VerticalAlignment="Center" FontWeight="SemiBold" />
+      </DockPanel>
+    </Border>
+
+    <Grid>
+      <TextBlock Text="Rode a análise para ver as sugestões de limpeza." Foreground="{StaticResource Muted}"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Categories}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Expander IsExpanded="{Binding IsExpanded}" Margin="0,0,0,8">
+                <Expander.Header>
+                  <StackPanel Orientation="Horizontal">
+                    <CheckBox IsThreeState="False" IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+                    <Border CornerRadius="8" Padding="8,1" Margin="10,0" VerticalAlignment="Center">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="Background" Value="{StaticResource ReviewBrush}" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSafe}" Value="True">
+                              <Setter Property="Background" Value="{StaticResource SafeBrush}" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <TextBlock Text="{Binding RiskText}" Foreground="White" FontSize="11" />
+                    </Border>
+                    <TextBlock Text="{Binding TotalText}" Foreground="{StaticResource Muted}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Expander.Header>
+                <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          HeadersVisibility="Column" GridLinesVisibility="None" MaxHeight="320" Margin="24,4,0,0"
+                          EnableRowVirtualization="True" SelectionMode="Extended" IsReadOnly="False">
+                  <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="" Width="32">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <CheckBox IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" />
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Caminho" Binding="{Binding PathText, Mode=OneWay}" Width="*" IsReadOnly="True" />
+                    <DataGridTextColumn Header="Tamanho" Binding="{Binding SizeText, Mode=OneWay}" Width="90" IsReadOnly="True" />
+                    <DataGridTextColumn Header="Motivo" Binding="{Binding Reason, Mode=OneWay}" Width="260" IsReadOnly="True" />
+                    <DataGridTextColumn Header="Modificado" Binding="{Binding AgeText, Mode=OneWay}" Width="100" IsReadOnly="True" />
+                  </DataGrid.Columns>
+                </DataGrid>
+              </Expander>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>
