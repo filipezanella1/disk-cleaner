@@ -68,11 +68,11 @@ public class CleanerTests : RuleTestBase
     }
 
     [Fact]
-    public void Clean_Directory_OnlyChecksExistence()
+    public void Clean_CacheDirectory_ChangedTimestamp_StillCleaned()
     {
-        var dir = J(F.UserTemp, "d");
-        _fs.Dir(dir, W.AddDays(5)); // directory timestamp changed — still cleaned
-        var item = new CleanupItem(dir, true, 100, 100, W, CleanupCategory.Temp, Risk.Safe, "x");
+        var dir = J(F.LocalAppData, "Google", "Chrome", "User Data", "Default", "Cache");
+        _fs.Dir(dir, W.AddDays(5)); // caches are rewritten constantly — still cleaned
+        var item = new CleanupItem(dir, true, 100, 100, W, CleanupCategory.BrowserCache, Risk.Safe, "x");
         Assert.Single(Clean(item).Removed);
     }
 

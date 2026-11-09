@@ -12,11 +12,12 @@ public sealed class SuggestionsViewModel : ObservableObject
 {
     private readonly AppServices _services;
     private bool _isCleaning;
+    private bool _isLocked;
 
     public SuggestionsViewModel(AppServices services)
     {
         _services = services;
-        CleanCommand = new AsyncRelayCommand(CleanAsync, () => !IsCleaning && Selected().Any());
+        CleanCommand = new AsyncRelayCommand(CleanAsync, () => !IsCleaning && !IsLocked && Selected().Any());
     }
 
     public event Action<CleanupResult>? Cleaned;
@@ -24,6 +25,13 @@ public sealed class SuggestionsViewModel : ObservableObject
     public ObservableCollection<CategoryViewModel> Categories { get; } = new();
     public IAsyncRelayCommand CleanCommand { get; }
     public bool IsEmpty => Categories.Count == 0;
+
+    /// <summary>Set while a scan runs: cleaning must not mutate trees that are being built.</summary>
+    public bool IsLocked
+    {
+        get => _isLocked;
+        set { if (SetProperty(ref _isLocked, value)) CleanCommand.NotifyCanExecuteChanged(); }
+    }
 
     public bool IsCleaning
     {
@@ -86,8 +94,11 @@ public sealed class SuggestionsViewModel : ObservableObject
         var items = Selected().ToList();
         if (items.Count == 0) return;
         var dialogs = _services.Dialogs;
-        if (!dialogs.Confirm("Limpar selecionados",
-                $"Mover {Text.Number(items.Count)} itens ({SizeFormatter.Format(items.Sum(i => i.Size))}) para a Lixeira?"))
+        var files = items.Where(i => !i.IsRecycleBin).ToList();
+        var message = $"Mover {Text.Number(files.Count)} itens ({SizeFormatter.Format(files.Sum(i => i.Size))}) para a Lixeira?";
+        if (items.Any(i => i.IsRecycleBin))
+            message += "\n\nA Lixeira atual também será esvaziada (antes de receber estes itens) — o que já está nela não poderá ser recuperado.";
+        if (!dialogs.Confirm("Limpar selecionados", message))
             return;
 
         IsCleaning = true;
@@ -95,13 +106,13 @@ public sealed class SuggestionsViewModel : ObservableObject
         {
             var cleaner = _services.CreateCleaner();
             var result = await Task.Run(() => cleaner.Clean(items, list => MapViewModel.ConfirmPermanent(dialogs, list), CancellationToken.None));
-            var message = $"Liberado: {SizeFormatter.Format(result.BytesFreed)}.\nRemovidos: {Text.Number(result.Removed.Count)}. Pulados: {Text.Number(result.Skipped.Count)}.";
+            var summary = $"Liberado: {SizeFormatter.Format(result.BytesFreed)}.\nRemovidos: {Text.Number(result.Removed.Count)}. Pulados: {Text.Number(result.Skipped.Count)}.";
             if (result.Skipped.Count > 0)
-                message += "\n\n" + string.Join("\n", result.Skipped.Take(15).Select(s => $"• {s.Reason} — {s.Item.Path}"))
+                summary += "\n\n" + string.Join("\n", result.Skipped.Take(15).Select(s => $"• {s.Reason} — {s.Item.Path}"))
                            + (result.Skipped.Count > 15 ? "\n…" : "");
-            message += $"\n\nLog salvo em {_services.LogDirectory}";
+            summary += $"\n\nLog salvo em {_services.LogDirectory}";
             Cleaned?.Invoke(result);
-            dialogs.Info("Limpeza concluída", message);
+            dialogs.Info("Limpeza concluída", summary);
         }
         finally
         {

@@ -84,7 +84,7 @@ public sealed class Scanner
 
         foreach (var e in entries)
         {
-            if (e.IsReparsePoint)
+            if (e.IsLink)
             {
                 var link = e.IsDirectory
                     ? SpaceNode.CreateDirectory(e.FullPath, e.LastWriteUtc)

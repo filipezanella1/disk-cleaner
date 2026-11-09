@@ -28,7 +28,13 @@ public sealed class MainViewModel : ObservableObject
         Suggestions = new SuggestionsViewModel(services);
         Suggestions.Cleaned += OnCleaned;
         Map.Cleaned += OnCleaned;
-        AnalyzeCommand = new AsyncRelayCommand(AnalyzeAsync, () => !IsScanning);
+        AnalyzeCommand = new AsyncRelayCommand(AnalyzeAsync, () => !IsScanning && !Suggestions.IsCleaning);
+        Suggestions.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(SuggestionsViewModel.IsCleaning)) return;
+            Map.IsLocked = IsScanning || Suggestions.IsCleaning;
+            AnalyzeCommand.NotifyCanExecuteChanged();
+        };
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsScanning);
     }
 
@@ -45,6 +51,8 @@ public sealed class MainViewModel : ObservableObject
         private set
         {
             if (!SetProperty(ref _isScanning, value)) return;
+            Map.IsLocked = value || Suggestions.IsCleaning;
+            Suggestions.IsLocked = value;
             AnalyzeCommand.NotifyCanExecuteChanged();
             CancelCommand.NotifyCanExecuteChanged();
         }

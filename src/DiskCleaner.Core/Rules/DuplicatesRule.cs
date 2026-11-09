@@ -31,7 +31,7 @@ public sealed class DuplicatesRule : ICleanupRule
                 .ToList();
             var keep = ordered[0];
             foreach (var dup in ordered.Skip(1))
-                results.Add(CleanupItem.FromNode(dup, Category, Risk.Review, $"Cópia de {keep.FullPath}"));
+                results.Add(CleanupItem.FromNode(dup, Category, Risk.Review, $"Cópia de {keep.FullPath}") with { KeepPath = keep.FullPath });
         }
         return results;
     }

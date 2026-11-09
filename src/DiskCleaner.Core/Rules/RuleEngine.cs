@@ -46,6 +46,9 @@ public sealed class RuleEngine
             acceptedPaths.Add(path);
         }
 
+        // A duplicate is only safe to remove while its kept copy stays: drop it if the kept copy is itself suggested.
+        accepted.RemoveAll(i => i.KeepPath is not null && HasAcceptedAncestorOrSelf(PathUtil.Normalize(i.KeepPath), acceptedPaths));
+
         return accepted
             .GroupBy(i => i.Category)
             .OrderBy(g => g.Key)

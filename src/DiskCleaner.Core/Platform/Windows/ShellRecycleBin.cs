@@ -24,7 +24,7 @@ public sealed class ShellRecycleBin : IRecycleBin
             var root = Path.GetPathRoot(path);
             if (string.IsNullOrEmpty(root) || root.StartsWith(@"\\", StringComparison.Ordinal)) return false;
             var type = new DriveInfo(root).DriveType;
-            return type is DriveType.Fixed or DriveType.Removable;
+            return RecyclePolicy.DriveHasRecycleBin(type);
         }
         catch (ArgumentException)
         {

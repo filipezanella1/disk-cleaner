@@ -16,6 +16,7 @@ public sealed class Cleaner
     public const string ReasonCancelled = "Cancelado";
     public const string ReasonDeleteFailed = "Falha ao excluir";
     public const string ReasonEmptyFailed = "Falha ao esvaziar a Lixeira";
+    public const string ReasonKeptCopyMissing = "Cópia mantida não encontrada";
 
     private readonly IFileSystem _fs;
     private readonly IRecycleBin _bin;
@@ -48,6 +49,14 @@ public sealed class Cleaner
 
         bool permanentOk = unrecyclable.Count > 0 && !ct.IsCancellationRequested && confirmPermanentDelete(unrecyclable);
 
+        // Empty the bin BEFORE recycling, so the files this batch sends to the bin stay recoverable.
+        if (recycleBinItem is not null)
+        {
+            if (ct.IsCancellationRequested) skipped.Add(new SkippedItem(recycleBinItem, ReasonCancelled));
+            else if (_bin.Empty()) removed.Add(recycleBinItem);
+            else skipped.Add(new SkippedItem(recycleBinItem, ReasonEmptyFailed));
+        }
+
         foreach (var item in recyclable)
         {
             if (ct.IsCancellationRequested) { skipped.Add(new SkippedItem(item, ReasonCancelled)); continue; }
@@ -70,13 +79,6 @@ public sealed class Cleaner
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { skipped.Add(new SkippedItem(item, ReasonDeleteFailed)); }
         }
 
-        if (recycleBinItem is not null)
-        {
-            if (ct.IsCancellationRequested) skipped.Add(new SkippedItem(recycleBinItem, ReasonCancelled));
-            else if (_bin.Empty()) removed.Add(recycleBinItem);
-            else skipped.Add(new SkippedItem(recycleBinItem, ReasonEmptyFailed));
-        }
-
         var result = new CleanupResult(removed, skipped, removed.Sum(i => i.Size));
         try { _log.Write(result); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* logging must not break cleanup */ }
         return result;
@@ -91,6 +93,18 @@ public sealed class Cleaner
         if (now is null || now.IsDirectory != item.IsDirectory) return ReasonMissing;
         if (!item.IsDirectory && (now.Length != item.LogicalSizeAtScan || now.LastWriteUtc != item.LastWriteUtcAtScan))
             return ReasonChanged;
+        // Folders: a changed timestamp means entries were added/removed since the scan. Browser/app caches are
+        // rewritten constantly by design and are safe to clear anyway, so they are exempt.
+        if (item.IsDirectory && item.Category is not (CleanupCategory.BrowserCache or CleanupCategory.AppCache)
+            && now.LastWriteUtc != item.LastWriteUtcAtScan)
+            return ReasonChanged;
+        if (item.KeepPath is not null)
+        {
+            FsEntry? kept;
+            try { kept = _fs.GetEntry(item.KeepPath); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { kept = null; }
+            if (kept is null || kept.IsDirectory || kept.Length != item.LogicalSizeAtScan) return ReasonKeptCopyMissing;
+        }
         return null;
     }
 

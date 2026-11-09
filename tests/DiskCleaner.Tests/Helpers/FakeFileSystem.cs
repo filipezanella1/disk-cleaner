@@ -11,11 +11,17 @@ public sealed class FakeFileSystem : IFileSystem
     public Dictionary<string, Exception> OpenReadThrows { get; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Deleted { get; } = new();
 
-    public FakeFileSystem Dir(string path, DateTime? lastWriteUtc = null)
+    public FakeFileSystem Dir(string path, DateTime? lastWriteUtc = null, FileAttributes attrs = FileAttributes.Directory)
     {
-        _entries[path] = new FsEntry(Path.GetFileName(path), path, true, 0, lastWriteUtc ?? TestTrees.T0, FileAttributes.Directory);
+        _entries[path] = new FsEntry(Path.GetFileName(path), path, true, 0, lastWriteUtc ?? TestTrees.T0, attrs);
         var parent = Path.GetDirectoryName(path);
         if (parent is not null && parent != path && !_entries.ContainsKey(parent) && Path.GetPathRoot(path) != path) Dir(parent);
+        return this;
+    }
+
+    public FakeFileSystem Link(string path)
+    {
+        _entries[path] = new FsEntry(Path.GetFileName(path), path, true, 0, TestTrees.T0, FileAttributes.Directory | FileAttributes.ReparsePoint, IsLink: true);
         return this;
     }
 

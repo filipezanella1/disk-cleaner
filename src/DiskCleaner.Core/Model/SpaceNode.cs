@@ -73,7 +73,11 @@ public sealed class SpaceNode
         if (_children is null) return false;
         bool removed;
         lock (_lock) removed = _children.Remove(child);
-        if (removed) AddToAncestors(this, -child.LogicalSize, -child.AllocatedSize);
+        if (removed)
+        {
+            AddToAncestors(this, -child.LogicalSize, -child.AllocatedSize);
+            child.Parent = null;
+        }
         return removed;
     }
 

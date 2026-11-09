@@ -20,6 +20,9 @@ public sealed record CleanupItem(
 {
     public const string RecycleBinPath = "::RecycleBin";
 
+    /// <summary>For duplicates: the copy that is kept. Cleaning is refused if it no longer exists.</summary>
+    public string? KeepPath { get; init; }
+
     public bool IsRecycleBin => Path == RecycleBinPath;
 
     public static CleanupItem FromNode(SpaceNode n, CleanupCategory c, Risk r, string reason) =>

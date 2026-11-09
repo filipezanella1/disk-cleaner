@@ -46,9 +46,17 @@ public class PhysicalFileSystem : IFileSystem
 
     protected static FsEntry ToEntry(FileSystemInfo info) => info switch
     {
-        FileInfo f => new FsEntry(f.Name, f.FullName, false, SafeLength(f), f.LastWriteTimeUtc, f.Attributes),
-        _ => new FsEntry(info.Name, info.FullName, true, 0, info.LastWriteTimeUtc, info.Attributes),
+        FileInfo f => new FsEntry(f.Name, f.FullName, false, SafeLength(f), f.LastWriteTimeUtc, f.Attributes, IsLink(f)),
+        _ => new FsEntry(info.Name, info.FullName, true, 0, info.LastWriteTimeUtc, info.Attributes, IsLink(info)),
     };
+
+    private static bool IsLink(FileSystemInfo info)
+    {
+        if ((info.Attributes & FileAttributes.ReparsePoint) == 0) return false;
+        try { return info.LinkTarget is not null; }
+        catch (IOException) { return true; } // unreadable reparse data: be safe, don't follow
+        catch (UnauthorizedAccessException) { return true; }
+    }
 
     private static long SafeLength(FileInfo f)
     {

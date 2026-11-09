@@ -26,6 +26,9 @@ public sealed class MapViewModel : ObservableObject
 
     public event Action<CleanupResult>? Cleaned;
 
+    /// <summary>True while a scan or a cleanup is running; manual removal is refused meanwhile.</summary>
+    public bool IsLocked { get; set; }
+
     public ObservableCollection<NodeViewModel> Roots { get; } = new();
     public IRelayCommand GoUpCommand { get; }
 
@@ -127,6 +130,11 @@ public sealed class MapViewModel : ObservableObject
 
     public async Task RecycleAsync(NodeViewModel vm)
     {
+        if (IsLocked)
+        {
+            _services.Dialogs.Info("Aguarde", "Espere a análise ou a limpeza em andamento terminar.");
+            return;
+        }
         if (!CanRecycle(vm))
         {
             _services.Dialogs.Info("Caminho protegido", "Este caminho é protegido e não pode ser removido pelo DiskCleaner.");
